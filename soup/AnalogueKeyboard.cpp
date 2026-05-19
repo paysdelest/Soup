@@ -34,14 +34,14 @@ NAMESPACE_SOUP
 		// Wooting, https://github.com/WootingKb/wooting-analog-sdk/blob/develop/wooting-analog-plugin/src/lib.rs
 		if (hid.vendor_id == 0x31E3)
 		{
-			if (hid.usage_page == 0xFF54 || hid.usage_page == 0xFF53)
+			if (hid.usage_page == 0xFF54)
 			{
 				return hid.getProductName();
 			}
 		}
 		else if (hid.vendor_id == 0x03EB)
 		{
-			if (hid.usage_page == 0xFF54) // Old Firmware only supports v1 interface
+			if (hid.usage_page == 0xFF54)
 			{
 				if (hid.product_id == 0xFF01)
 				{
@@ -152,6 +152,13 @@ NAMESPACE_SOUP
 				{
 					return "Keychron K2 HE";
 				}
+				if (hid.product_id == 0x0E60 // ANSI
+					|| hid.product_id == 0x0E61 // ISO
+					|| hid.product_id == 0x0E62 // JIS
+					)
+				{
+					return "Keychron K6 HE";
+				}
 			}
 		}
 		else if (hid.vendor_id == 0x362D) // Lemokey
@@ -181,11 +188,7 @@ NAMESPACE_SOUP
 		{
 			if (hid.usage_page == 0xff60 && hid.usage == 0x61)
 			{
-				if (
-					hid.product_id == 0x1055 || hid.product_id == 0x1056 || hid.product_id == 0x105D // Mine says 0x105d but their web driver includes these 3
-					|| hid.product_id == 0x1053 // https://github.com/AnalogSense/universal-analog-plugin/issues/32
-					|| hid.product_id == 0x1054 // https://github.com/AnalogSense/universal-analog-plugin/issues/37
-					)
+				if (hid.product_id == 0x1055 || hid.product_id == 0x1056 || hid.product_id == 0x105D) // Mine says 0x105d but their web driver includes these 3
 				{
 					return "Madlions MAD60HE";
 				}
@@ -257,6 +260,15 @@ NAMESPACE_SOUP
 		KEY_LCTRL,     KEY_LMETA, KEY_LALT, KEY_NONE, KEY_NONE, KEY_NONE, KEY_SPACE, KEY_NONE, KEY_NONE, KEY_RALT,  KEY_FN,        KEY_RCTRL,        KEY_ARROW_LEFT,    KEY_ARROW_DOWN,   KEY_ARROW_RIGHT, KEY_NONE,
 	};
 	static_assert(sizeof(layout_keychron_k2_he) == 2 + 6 * 16);
+
+	static const uint8_t layout_keychron_k6_he[] = { 5, 15,
+		KEY_ESCAPE,    KEY_1,     KEY_2,    KEY_3,    KEY_4,    KEY_5,    KEY_6,     KEY_7,    KEY_8,    KEY_9,     KEY_0,         KEY_MINUS,        KEY_EQUALS,        KEY_BACKSPACE,  KEY_PAGE_UP,
+		KEY_TAB,       KEY_Q,     KEY_W,    KEY_E,    KEY_R,    KEY_T,    KEY_Y,     KEY_U,    KEY_I,    KEY_O,     KEY_P,         KEY_BRACKET_LEFT, KEY_BRACKET_RIGHT, KEY_BACKSLASH,  KEY_PAGE_DOWN,
+		KEY_CAPS_LOCK, KEY_A,     KEY_S,    KEY_D,    KEY_F,    KEY_G,    KEY_H,     KEY_J,    KEY_K,    KEY_L,     KEY_SEMICOLON, KEY_QUOTE,        KEY_ENTER,         KEY_HOME,       KEY_NONE,
+		KEY_LSHIFT,    KEY_NONE,  KEY_Z,    KEY_X,    KEY_C,    KEY_V,    KEY_B,     KEY_N,    KEY_M,    KEY_COMMA, KEY_PERIOD,    KEY_SLASH,        KEY_RSHIFT,        KEY_ARROW_UP,   KEY_END,
+		KEY_LCTRL,     KEY_LMETA, KEY_LALT, KEY_NONE, KEY_NONE, KEY_NONE, KEY_SPACE, KEY_NONE, KEY_NONE, KEY_RMETA, KEY_FN,        KEY_RCTRL,        KEY_ARROW_LEFT,    KEY_ARROW_DOWN, KEY_ARROW_RIGHT,
+	};
+	static_assert(sizeof(layout_keychron_k6_he) == 2 + 5 * 15);
 
 	static const uint8_t layout_lemokey_p1_he_ansi[] = { 6, 15,
 		KEY_ESCAPE,    KEY_F1,    KEY_F2,   KEY_F3,   KEY_F4,   KEY_F5,   KEY_F6,    KEY_F7,   KEY_F8,   KEY_F9,    KEY_F10,       KEY_F11,          KEY_F12,           KEY_DEL,        KEY_NONE /* mute */,
@@ -378,6 +390,13 @@ NAMESPACE_SOUP
 						{
 							kbd.keychron.layout = layout_keychron_k2_he;
 						}
+						else if (hid.product_id == 0x0E60 // ANSI
+							|| hid.product_id == 0x0E61 // ISO
+							|| hid.product_id == 0x0E62 // JIS
+							)
+						{
+							kbd.keychron.layout = layout_keychron_k6_he;
+						}
 						else if (kbd.hid.product_id == 0x0610) // ANSI
 						{
 							kbd.keychron.layout = layout_lemokey_p1_he_ansi;
@@ -389,7 +408,7 @@ NAMESPACE_SOUP
 					}
 					else if (kbd.hid.vendor_id == 0x373b) // Madlions
 					{
-						if (hid.product_id == 0x1055 || hid.product_id == 0x1056 || hid.product_id == 0x105D || hid.product_id == 0x1053 || hid.product_id == 0x1054)
+						if (hid.product_id == 0x1055 || hid.product_id == 0x1056 || hid.product_id == 0x105D)
 						{
 							kbd.madlions.layout_size = sizeof(layout_madlions_mad60he);
 							kbd.madlions.layout = layout_madlions_mad60he;
@@ -404,37 +423,6 @@ NAMESPACE_SOUP
 			}
 		}
 		return res;
-	}
-
-	[[nodiscard]] static Key wooting_scancode_to_soup_key(uint16_t scancode) noexcept
-	{
-		Key sk;
-		SOUP_IF_UNLIKELY ((scancode >> 8) != 0)
-		{
-			switch (scancode)
-			{
-			default: sk = KEY_NONE; break;
-				// Usage Page 0x0C
-			case 0x3B5: sk = KEY_NEXT_TRACK; break;
-			case 0x3B6: sk = KEY_PREV_TRACK; break;
-			case 0x3B7: sk = KEY_STOP_MEDIA; break;
-			case 0x3CD: sk = KEY_PLAY_PAUSE; break;
-				// OEM-specific
-			case 0x401: sk = KEY_OEM_5; break; // Brightness Up
-			case 0x402: sk = KEY_OEM_6; break; // Brightness Down
-			case 0x403: sk = KEY_OEM_1; break; // Profile 1
-			case 0x404: sk = KEY_OEM_2; break; // Profile 2
-			case 0x405: sk = KEY_OEM_3; break; // Profile 3
-			case 0x408: sk = KEY_OEM_4; break; // Profile Switch
-			case 0x409: sk = KEY_FN; break;
-			}
-		}
-		else
-		{
-			// Usage Page 0x07
-			sk = hid_scancode_to_soup_key(static_cast<uint8_t>(scancode));
-		}
-		return sk;
 	}
 
 	[[nodiscard]] static Key razer_scancode_to_soup_key(uint8_t scancode) noexcept
@@ -568,14 +556,7 @@ NAMESPACE_SOUP
 	{
 		if (hid.vendor_id == 0x31E3 || hid.vendor_id == 0x03EB)
 		{
-			if (hid.usage_page == 0xFF54)
-			{
-				return getActiveKeysWootingV1();
-			}
-			else //if (hid.usage_page == 0xFF53)
-			{
-				return getActiveKeysWootingV2();
-			}
+			return getActiveKeysWooting();
 		}
 		else if (hid.vendor_id == 0x1532)
 		{
@@ -603,7 +584,7 @@ NAMESPACE_SOUP
 		}
 	}
 
-	std::vector<ActiveKey> AnalogueKeyboard::getActiveKeysWootingV1()
+	std::vector<ActiveKey> AnalogueKeyboard::getActiveKeysWooting()
 	{
 		std::vector<ActiveKey> keys{};
 		const Buffer<>& report = hid.receiveReport();
@@ -622,7 +603,32 @@ NAMESPACE_SOUP
 				&& r.u8(value)
 				)
 			{
-				const Key sk = wooting_scancode_to_soup_key(scancode);
+				Key sk;
+				SOUP_IF_UNLIKELY ((scancode >> 8) != 0)
+				{
+					switch (scancode)
+					{
+					default: sk = KEY_NONE; break;
+						// Usage Page 0x0C
+					case 0x3B5: sk = KEY_NEXT_TRACK; break;
+					case 0x3B6: sk = KEY_PREV_TRACK; break;
+					case 0x3B7: sk = KEY_STOP_MEDIA; break;
+					case 0x3CD: sk = KEY_PLAY_PAUSE; break;
+						// OEM-specific
+					case 0x401: sk = KEY_OEM_5; break; // Brightness Up
+					case 0x402: sk = KEY_OEM_6; break; // Brightness Down
+					case 0x403: sk = KEY_OEM_1; break; // Profile 1
+					case 0x404: sk = KEY_OEM_2; break; // Profile 2
+					case 0x405: sk = KEY_OEM_3; break; // Profile 3
+					case 0x408: sk = KEY_OEM_4; break; // Profile Switch
+					case 0x409: sk = KEY_FN; break;
+					}
+				}
+				else
+				{
+					// Usage Page 0x07
+					sk = hid_scancode_to_soup_key(static_cast<uint8_t>(scancode));
+				}
 				SOUP_IF_LIKELY (sk != KEY_NONE)
 				{
 					// some keys seem to be getting reported multiple times on older firmware, so just use last reported value
@@ -639,50 +645,6 @@ NAMESPACE_SOUP
 						static_cast<float>(value) / 255.0f
 					});
 				_no_emplace:;
-				}
-			}
-		}
-		return keys;
-	}
-
-	// https://github.com/WootingKb/wooting-analog-sdk/blob/be67cbf479eb1e10e2859e71dbdcc12fff7ba266/wooting-analog-sdk/src/plugin.rs#L276
-	std::vector<ActiveKey> AnalogueKeyboard::getActiveKeysWootingV2()
-	{
-		std::vector<ActiveKey> keys{};
-		const Buffer<>& report = hid.receiveReport();
-		SOUP_IF_UNLIKELY (report.empty())
-		{
-			disconnected = true;
-		}
-		else
-		{
-			MemoryRefReader r(report);
-			uint8_t matrix_pos, scancode_lo, packed, value_hi;
-			while (r.hasMore()
-				&& r.u8(matrix_pos)
-				&& r.u8(scancode_lo)
-				&& scancode_lo != 0
-				&& r.u8(packed)
-				&& r.u8(value_hi)
-				)
-			{
-				//uint8_t row = (matrix_pos >> 5) & 0x7;
-				//uint8_t column = matrix_pos & 0x1f;
-				//bool actuated = (packed & 1) != 0;
-				//bool _reserved = (packed >> 1) & 1;
-				uint8_t scancode_hi = (packed >> 2) & 0xf;
-				uint8_t value_lo = (packed >> 6) & 0x3;
-
-				uint16_t scancode = (static_cast<uint16_t>(scancode_hi) << 8 | scancode_lo);
-				uint16_t value = (static_cast<uint16_t>(value_hi) << 2 | value_lo);
-
-				const Key sk = wooting_scancode_to_soup_key(scancode);
-				SOUP_IF_LIKELY (sk != KEY_NONE)
-				{
-					keys.emplace_back(ActiveKey{
-						sk,
-						static_cast<float>(value) / 1023.0f
-					});
 				}
 			}
 		}
@@ -1067,7 +1029,7 @@ if (combined[i]) \
 			{
 				r.skip(1); // unknown, seems to be 0x10 in most cases
 				uint16_t scancode; r.u16_be(scancode);
-				uint16_t value; r.u16_be(value); // fvalue * 800
+				uint16_t value; r.u16_be(value); // fvalue * 800 (or * 1600 for some models)
 				r.skip(2); // (u16_be) fvalue * x where x seems to depend on the maximum key travel set in NuphyIO
 
 				Key sk;
@@ -1094,11 +1056,16 @@ if (combined[i]) \
 
 				SOUP_IF_LIKELY (sk != KEY_NONE)
 				{
-					if (hid.product_id == 0x6120 || hid.product_id == 0xFEE0) // NuPhy Air75/60 HE
+					// NuPhy Air60 HE (0xFEE0) and Air75 HE (0x6120) report values in [0, 1600]
+					// instead of [0, 800] like other NuPhy models. Using 800.0f as divisor
+					// causes the value to exceed 1.0 at ~50% travel, producing double-press
+					// artefacts and stick-lock. Fix per GitHub issue #31 (Sainan, Feb 2025).
+					if (hid.product_id == 0xFEE0  // NuPhy Air60 HE
+					 || hid.product_id == 0x6120) // NuPhy Air75 HE
 					{
 						nuphy.buffer[sk] = static_cast<uint8_t>(static_cast<float>(value) / 1600.0f * 255.0);
 					}
-					else // Others
+					else
 					{
 						nuphy.buffer[sk] = static_cast<uint8_t>(static_cast<float>(value) / 800.0f * 255.0);
 					}
